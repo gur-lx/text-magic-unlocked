@@ -9,8 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RsaRouteImport } from './routes/rsa'
+import { Route as HillRouteImport } from './routes/hill'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RsaRoute = RsaRouteImport.update({
+  id: '/rsa',
+  path: '/rsa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HillRoute = HillRouteImport.update({
+  id: '/hill',
+  path: '/hill',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +31,50 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/hill': typeof HillRoute
+  '/rsa': typeof RsaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/hill': typeof HillRoute
+  '/rsa': typeof RsaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/hill': typeof HillRoute
+  '/rsa': typeof RsaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/hill' | '/rsa'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/hill' | '/rsa'
+  id: '__root__' | '/' | '/hill' | '/rsa'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HillRoute: typeof HillRoute
+  RsaRoute: typeof RsaRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/rsa': {
+      id: '/rsa'
+      path: '/rsa'
+      fullPath: '/rsa'
+      preLoaderRoute: typeof RsaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hill': {
+      id: '/hill'
+      path: '/hill'
+      fullPath: '/hill'
+      preLoaderRoute: typeof HillRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +87,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HillRoute: HillRoute,
+  RsaRoute: RsaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
