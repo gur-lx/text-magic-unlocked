@@ -22,7 +22,7 @@ function Index() {
             <span className="label-eyebrow">Foundations of Cryptography</span>
           </div>
           <h1 className="font-display text-[clamp(3rem,7vw,6.5rem)] font-semibold leading-[0.95] tracking-tight">
-            Two ciphers,<br />
+            Two0 ciphers,<br />
             <span className="italic font-normal">one </span>
             <span className="text-accent">secret</span>.
           </h1>
