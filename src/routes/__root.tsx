@@ -121,7 +121,7 @@ function Footer() {
   return (
     <footer className="mt-24 border-t border-[color:var(--rule)]">
       <div className="mx-auto max-w-6xl px-6 py-8 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-muted-foreground">
-        <div>© 2026 · Cryptex Codex · Network Security & Cryptography</div>
+        <div>© 2026 · Cryptex Codex · Network Security & Cryptography · Developed & Hosted by Gurpiyar Singh</div>
         <div className="flex gap-4">
           <span>RSA-1977</span>
           <span>HILL-1929</span>
