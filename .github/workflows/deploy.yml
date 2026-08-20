@@ -25,7 +25,7 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 with rollback
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -33,14 +33,116 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
 
-            set -e 
-            
-            cd /var/www/html/learning.run.place
+            set -e
 
-            git fetch origin
-            git reset --hard origin/main
+            APP_DIR="/var/www/html/learning.run.place"
+            RELEASES_DIR="$APP_DIR/releases"
+            NEW_RELEASE="$RELEASES_DIR/${{ github.sha }}"
+            CURRENT_LINK="$APP_DIR/current"
 
+            echo "======================================"
+            echo "Starting deployment"
+            echo "Commit: ${{ github.sha }}"
+            echo "======================================"
+
+            # Create releases directory
+            mkdir -p "$RELEASES_DIR"
+
+            # Save current release for rollback
+            if [ -L "$CURRENT_LINK" ]; then
+              PREVIOUS_RELEASE=$(readlink -f "$CURRENT_LINK")
+              echo "Previous release: $PREVIOUS_RELEASE"
+            else
+              PREVIOUS_RELEASE=""
+              echo "No previous release found."
+            fi
+
+            # Create new release directory
+            mkdir -p "$NEW_RELEASE"
+
+            echo "Preparing new release..."
+
+            # Get source code
+            cd "$NEW_RELEASE"
+
+            git clone --depth 1 https://github.com/${{ github.repository }}.git .
+
+            # Checkout exact commit
+            git checkout ${{ github.sha }}
+
+            echo "Installing dependencies..."
             npm ci
+
+            echo "Building application..."
             npm run build
 
-            pm2 restart learning-app
+            # Verify dist exists
+            if [ ! -d "dist" ]; then
+              echo "ERROR: dist directory was not created."
+              rm -rf "$NEW_RELEASE"
+              exit 1
+            fi
+
+            echo "New build created successfully."
+
+            # Point current to the new release
+            ln -sfn "$NEW_RELEASE" "$CURRENT_LINK"
+
+            echo "Current release switched to:"
+            readlink -f "$CURRENT_LINK"
+
+            # Restart application
+            echo "Restarting application..."
+
+            pm2 restart learning-app || pm2 start npm --name learning-app -- start
+
+            sleep 5
+
+            # Health check
+            echo "Running health check..."
+
+            if curl -f -s http://localhost:3000 > /dev/null; then
+              echo "Health check PASSED."
+              echo "Deployment successful."
+
+            else
+              echo "Health check FAILED."
+              echo "Starting rollback..."
+
+              # Restore previous release
+              if [ -n "$PREVIOUS_RELEASE" ] && [ -d "$PREVIOUS_RELEASE" ]; then
+
+                ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"
+
+                echo "Rolled back to:"
+                echo "$PREVIOUS_RELEASE"
+
+                pm2 restart learning-app
+
+                sleep 5
+
+                if curl -f -s http://localhost:3000 > /dev/null; then
+                  echo "Rollback successful."
+                else
+                  echo "ERROR: Rollback health check failed."
+                  exit 1
+                fi
+
+              else
+                echo "ERROR: No previous release available for rollback."
+                exit 1
+              fi
+
+              exit 1
+            fi
+
+            # Keep only last 5 releases
+            echo "Cleaning old releases..."
+
+            cd "$RELEASES_DIR"
+
+            ls -1dt */ 2>/dev/null | tail -n +6 | xargs -r rm -rf
+
+            echo "======================================"
+            echo "Deployment completed successfully."
+            echo "======================================"
