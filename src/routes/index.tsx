@@ -43,7 +43,7 @@ function Index() {
         <aside className="lg:col-span-4 relative">
           <div className="paper-card p-6 relative overflow-hidden scanline">
             <div className="flex justify-between items-start mb-4">
-              <span className="label-eyebrow">Specimen · 0001</span>
+              <span className="label-eyebrow">Specimen · 001</span>
               <span className="stamp">Classified</span>
             </div>
             <div className="font-mono text-xs leading-relaxed text-ink-soft">
