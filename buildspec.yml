@@ -24,6 +24,15 @@ env:
 phases:
   pre_build:
     commands:
+      # --- Diagnostics: prove which source CodeBuild actually pulled ---
+      - echo "Resolved source version:" "$CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - echo "Source repo URL:" "$CODEBUILD_SOURCE_REPO_URL"
+      - echo "Working dir:" "$(pwd)"
+      - echo "--- files in build context ---"
+      - ls -la
+      - echo "--- does Dockerfile exist? ---"
+      - test -f Dockerfile && echo "Dockerfile FOUND ($(wc -c < Dockerfile) bytes)" || echo "Dockerfile MISSING"
+      # ---------------------------------------------------------------
       - echo "Resolving ECR registry URI..."
       - REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
       - REPO_URI="$REGISTRY/$ECR_REPO_NAME"
