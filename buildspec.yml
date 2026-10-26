@@ -1,0 +1,48 @@
+version: 0.2
+
+# CodeBuild → ECR pipeline for the Cryptex (TanStack Start) app.
+#
+# Set these as CodeBuild environment variables (Project → Edit → Environment),
+# or hard-code them below:
+#   AWS_ACCOUNT_ID   e.g. 064271146575
+#   AWS_DEFAULT_REGION e.g. ap-southeast-2
+#   ECR_REPO_NAME    the ECR repository you created, e.g. simple-docker-service
+#   IMAGE_TAG        optional, defaults to "latest"
+#
+# The CodeBuild service role must allow ECR auth/push:
+#   ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability,
+#   ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload,
+#   ecr:PutImage  (AmazonEC2ContainerRegistryPowerUser covers these).
+
+env:
+  variables:
+    IMAGE_TAG: "latest"
+
+phases:
+  pre_build:
+    commands:
+      - echo "Resolving ECR registry URI..."
+      - REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - REPO_URI="$REGISTRY/$ECR_REPO_NAME"
+      - echo "Logging in to $REGISTRY"
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+
+  build:
+    commands:
+      - echo "Building image $REPO_URI:$IMAGE_TAG"
+      # Build for x86 so it runs on Fargate/EC2 x86 hosts.
+      - docker build --platform linux/amd64 -t "$REPO_URI:$IMAGE_TAG" -f ./Dockerfile .
+      # Also tag with the commit SHA for traceability.
+      - docker tag "$REPO_URI:$IMAGE_TAG" "$REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION"
+
+  post_build:
+    commands:
+      - echo "Pushing image to ECR..."
+      - docker push "$REPO_URI:$IMAGE_TAG"
+      - docker push "$REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - echo "Writing imagedefinitions.json for ECS deploy stage..."
+      - printf '[{"name":"demo","imageUri":"%s"}]' "$REPO_URI:$IMAGE_TAG" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
