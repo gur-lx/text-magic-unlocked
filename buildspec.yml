@@ -16,6 +16,9 @@ version: 0.2
 
 env:
   variables:
+    AWS_ACCOUNT_ID: "064271146575"
+    AWS_DEFAULT_REGION: "ap-southeast-2"
+    ECR_REPO_NAME: "simple-docker-service-0adc8e57ea5b"
     IMAGE_TAG: "latest"
 
 phases:
